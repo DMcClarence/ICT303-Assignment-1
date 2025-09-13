@@ -11,8 +11,8 @@ class Trainer:
     self.data = None
     self.device = device
     self.max_epochs = n_epochs
-    self.train_loss = []
-    self.valid_loss = []
+    self.avg_train_loss = []
+    self.avg_valid_loss = []
 
   @staticmethod
   def exp_lr(lr):
@@ -36,13 +36,13 @@ class Trainer:
       print("Epoch: ", epoch + completed_epochs if resume else epoch)
       print("Training:")
       self.model.train()
-      self.train_loss.append(self.fit_epoch())
+      self.avg_train_loss.append(self.fit_epoch())
       self.model.lr = self.exp_lr(self.model.lr)
-      self.evaluate(self.model, self.data)
+      self.evaluate(self.model, self.data, train=True)
       self.model.eval()
       print("Validating:")
-      self.valid_loss.append(self.validate_epoch())
-      self.evaluate(self.model, self.valid)
+      self.avg_valid_loss.append(self.validate_epoch())
+      self.evaluate(self.model, self.valid, train=False)
       if epoch % 5 == 0 or epoch == self.max_epochs - 1:
         self.model.save(save_dir=os.getcwd(), trained_epochs=epoch)
         self.save(save_dir=os.getcwd(), trained_epochs=epoch)
@@ -78,14 +78,14 @@ class Trainer:
           print('Loss after mini-batch %5d: %.3f' %
                 (i + 1, current_loss / 10))
           current_loss = 0.0
-    return overall_loss
+    return overall_loss / len(self.data.dataset)
 
   @torch.no_grad()
   def validate_epoch(self):
     current_loss = 0.0
     overall_loss = 0.0
 
-    for i, data in enumerate(self.data):
+    for i, data in enumerate(self.valid):
       inputs, target = data
       inputs, target = inputs.to(self.device), target.to(self.device)
 
@@ -97,10 +97,10 @@ class Trainer:
           print('Loss after mini-batch %5d: %.3f' %
                 (i + 1, current_loss / 10))
           current_loss = 0.0
-    return overall_loss
+    return overall_loss / len(self.valid.dataset)
 
   @torch.no_grad()
-  def evaluate(self, model, data):
+  def evaluate(self, model, data, train=False):
     correct = 0
     total = 0
     for images, labels in data:
@@ -109,18 +109,18 @@ class Trainer:
       est_label = torch.max(outputs, 1).indices
       correct += sum(est_label == labels)
       total += labels.size(0)
-    print("Validation Accuracy: ", (correct / total) * 100, "%")
+    print("Training Accuracy: " if train else "Validation Accuracy: ", (correct / total) * 100, "%")
     print("Correct: ", correct, "Total: ", total)
 
   def save(self, save_dir, trained_epochs=0):
     save_path = (save_dir + f"/MLP_Epoch_{int(trained_epochs)}_TrainingLoss.tar")
     torch.save(
-        dict(trainingLoss=self.train_loss,
-             validationLoss=self.valid_loss),
+        dict(trainingLoss=self.avg_train_loss,
+             validationLoss=self.avg_valid_loss),
         save_path)
     print(f"MLP Training Loss saved to {save_path} at Epoch {trained_epochs}")
 
   def load(self, load_dir):
     checkpoint = torch.load(load_dir, weights_only=True)
-    self.train_loss = checkpoint['trainingLoss']
-    self.valid_loss = checkpoint['validationLoss']
+    self.avg_train_loss = checkpoint['trainingLoss']
+    self.avg_valid_loss = checkpoint['validationLoss']
