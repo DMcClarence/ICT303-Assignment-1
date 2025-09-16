@@ -42,12 +42,12 @@ class Trainer:
       self.model.train()
       self.avg_train_loss.append(self.fit_epoch())
       self.model.lr = self.exp_lr(self.model.lr)
-      self.evaluate(self.model, self.data, train=True)
+      self.evaluate(self.model, self.data, train=True, plot_cm=False)
 
       self.model.eval()
       print("Validating:")
       self.avg_valid_loss.append(self.validate_epoch())
-      self.evaluate(self.model, self.valid, train=False)
+      self.evaluate(self.model, self.valid, train=False, plot_cm=True)
 
       if epoch % 5 == 0 or epoch == self.max_epochs - 1:
          self.model.save(save_dir=self.log_dir, trained_epochs=epoch)
@@ -114,18 +114,19 @@ class Trainer:
     for images, labels in data:
       images, labels = images.to(self.device), labels.to(self.device)
       outputs = model(images)
-      preds.append(outputs.cpu().detach().numpy())
-      truths.append(labels.cpu().detach().numpy())
       est_label = torch.max(outputs, 1).indices
       correct += sum(est_label == labels)
       total += labels.size(0)
+      for label in est_label.cpu():
+          preds.append(label)
+      for label in labels.cpu():
+          truths.append(label)
     print("Training Accuracy: " if train else "Validation Accuracy: ", float((correct / total) * 100), "%")
     self.training_accuracy.append(float((correct / total))) if train else self.validation_accuracy.append(float((correct / total)))
     print("Correct: ", correct, "Total: ", total)
 
     if plot_cm:
-        classes = self.data.dataset.classes
-        plot_confusion_matrix(save_dir=self.log_dir, est=preds, gnd_truth=truths, labels=classes)
+        plot_confusion_matrix(save_dir=self.log_dir, est=preds, gnd_truth=truths, labels=self.data.dataset.classes)
 
   def save(self, save_dir, trained_epochs=0):
     save_path = (save_dir + f"/Epoch_{int(trained_epochs)}_LossAccuracy.tar")
