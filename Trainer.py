@@ -5,7 +5,7 @@ import torch
 from ConfusionMatrix import plot_confusion_matrix
 
 class Trainer:
-  def __init__(self, log_dir, n_epochs=3, device="cpu", use_lr_scheduler=True):
+  def __init__(self, log_dir, n_epochs=3, device="cpu"):
     self.model = None
     self.optimiser = None
     self.valid = None
@@ -23,7 +23,7 @@ class Trainer:
     return lr * 0.95
 
   # The fitting step
-  def fit(self, model, data, valid, resume=False, completed_epochs=None):
+  def fit(self, model, data, valid, resume=False, completed_epochs=None, use_lr_scheduler=True):
     self.data = data
     self.valid = valid
 
@@ -41,7 +41,8 @@ class Trainer:
       print("Training:")
       self.model.train()
       self.avg_train_loss.append(self.fit_epoch())
-      self.model.lr = self.exp_lr(self.model.lr)
+      if use_lr_scheduler:
+        self.model.lr = self.exp_lr(self.model.lr)
       self.evaluate(self.model, self.data, train=True, plot_cm=False)
 
       self.model.eval()
