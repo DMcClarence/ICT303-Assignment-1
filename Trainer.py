@@ -112,6 +112,7 @@ class Trainer:
     total = 0
     preds = []
     truths = []
+
     for images, labels in data:
       images, labels = images.to(self.device), labels.to(self.device)
       outputs = model(images)
@@ -122,6 +123,7 @@ class Trainer:
           preds.append(label)
       for label in labels.cpu():
           truths.append(label)
+
     print("Training Accuracy: " if train else "Validation Accuracy: ", float((correct / total) * 100), "%")
     self.training_accuracy.append(float((correct / total))) if train else self.validation_accuracy.append(float((correct / total)))
     print("Correct: ", correct, "Total: ", total)

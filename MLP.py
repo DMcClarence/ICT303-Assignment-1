@@ -5,7 +5,7 @@ from torch import nn
 from torch.utils.tensorboard import SummaryWriter
 
 class MLP(nn.Module):
-  def __init__(self, log_dir, input_size=124*124*3, output_size=8, lr=0.0001):
+  def __init__(self, log_dir, input_size=224*224*3, output_size=8, lr=1e-4):
     super().__init__()
 
     self.net = nn.Sequential(
